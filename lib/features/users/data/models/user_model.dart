@@ -27,6 +27,23 @@ class UserModel extends UserEntity {
     );
   }
 
+  /// Builds a user row from the house owner's Realtime Database profile
+  /// (the BinGo app's source of truth for registration) plus whatever
+  /// admin-only payment metadata exists for them in Firestore, if any.
+  factory UserModel.fromRealtimeProfile(String id, Map profileInfo, Map<String, dynamic>? paymentData) {
+    return UserModel(
+      id: id,
+      houseNumber: (profileInfo['Registered_House_ID'] ?? '').toString().replaceAll('_', '/'),
+      ownerName: (profileInfo['Owner_Name'] ?? '').toString(),
+      nic: (profileInfo['Owner_NIC'] ?? '').toString(),
+      mobile: (profileInfo['Owner_Mobile'] ?? '').toString(),
+      isPaidManually: paymentData?['isPaidManually'] ?? false,
+      lastPaymentUpdateDate: paymentData?['lastPaymentUpdateDate'] != null
+          ? (paymentData!['lastPaymentUpdateDate'] as Timestamp).toDate()
+          : null,
+    );
+  }
+
   Map<String, dynamic> toFirestore() {
     return {
       'houseNumber': houseNumber,

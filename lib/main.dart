@@ -7,6 +7,8 @@ import 'features/navigation/presentation/providers/app_state_provider.dart';
 import 'features/navigation/presentation/screens/main_layout.dart';
 import 'features/users/domain/repositories/user_repository.dart';
 import 'features/users/data/repositories/user_repository_impl.dart';
+import 'features/users/domain/repositories/registration_request_repository.dart';
+import 'features/users/data/repositories/registration_request_repository_impl.dart';
 import 'features/drivers/domain/repositories/driver_repository.dart';
 import 'features/drivers/data/repositories/driver_repository_impl.dart';
 import 'features/requests/domain/repositories/request_repository.dart';
@@ -31,7 +33,10 @@ class BiongoAdminApp extends StatelessWidget {
         Provider<UserRepository>(create: (_) => UserRepositoryImpl()),
         Provider<DriverRepository>(create: (_) => DriverRepositoryImpl()),
         Provider<RequestRepository>(create: (_) => RequestRepositoryImpl()),
-        
+        ProxyProvider<DriverRepository, RegistrationRequestRepository>(
+          update: (_, driverRepository, __) => RegistrationRequestRepositoryImpl(driverRepository: driverRepository),
+        ),
+
         // State Providers
         ChangeNotifierProvider(create: (_) => AppStateProvider()),
       ],

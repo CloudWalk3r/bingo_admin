@@ -18,6 +18,7 @@ class _DriverManagementScreenState extends State<DriverManagementScreen> {
     final nicController = TextEditingController();
     final nameController = TextEditingController();
     final mobileController = TextEditingController();
+    final emailController = TextEditingController();
     final ageController = TextEditingController();
     DateTime licenseRenewed = DateTime.now();
     DateTime workStarted = DateTime.now();
@@ -62,6 +63,8 @@ class _DriverManagementScreenState extends State<DriverManagementScreen> {
                         ),
                         const SizedBox(height: 16),
                         _buildField('Mobile', mobileController, Icons.phone_android_outlined),
+                        const SizedBox(height: 16),
+                        _buildField('Login Email', emailController, Icons.mail_outline_rounded, keyboardType: TextInputType.emailAddress),
                         const SizedBox(height: 20),
                         _buildDatePicker('License Renewed', licenseRenewed, (d) => setStateDialog(() => licenseRenewed = d)),
                         const SizedBox(height: 12),
@@ -81,7 +84,8 @@ class _DriverManagementScreenState extends State<DriverManagementScreen> {
                         final repo = Provider.of<DriverRepository>(context, listen: false);
                         await repo.addDriver(DriverEntity(
                           id: '', nic: nicController.text, name: nameController.text,
-                          mobile: mobileController.text, age: int.tryParse(ageController.text) ?? 0,
+                          mobile: mobileController.text, email: emailController.text.trim(),
+                          age: int.tryParse(ageController.text) ?? 0,
                           lastLicenseRenewed: licenseRenewed, workStartedDate: workStarted,
                         ));
                         if (mounted) {
@@ -105,10 +109,10 @@ class _DriverManagementScreenState extends State<DriverManagementScreen> {
     );
   }
 
-  Widget _buildField(String label, TextEditingController ctrl, IconData icon, {bool isNumeric = false}) {
+  Widget _buildField(String label, TextEditingController ctrl, IconData icon, {bool isNumeric = false, TextInputType? keyboardType}) {
     return TextFormField(
       controller: ctrl,
-      keyboardType: isNumeric ? TextInputType.number : TextInputType.text,
+      keyboardType: keyboardType ?? (isNumeric ? TextInputType.number : TextInputType.text),
       style: const TextStyle(color: Colors.white, fontSize: 14),
       decoration: InputDecoration(labelText: label, prefixIcon: Icon(icon, size: 18, color: AppTheme.textTertiary)),
       validator: (v) => v == null || v.isEmpty ? 'Required' : null,
@@ -199,6 +203,7 @@ class _DriverManagementScreenState extends State<DriverManagementScreen> {
           Expanded(flex: 3, child: _HeaderLabel('DRIVER')),
           Expanded(flex: 2, child: _HeaderLabel('NIC')),
           Expanded(flex: 2, child: _HeaderLabel('MOBILE')),
+          Expanded(flex: 2, child: _HeaderLabel('LOGIN EMAIL')),
           Expanded(flex: 1, child: _HeaderLabel('AGE')),
           Expanded(flex: 2, child: _HeaderLabel('LICENSE DATE')),
           Expanded(flex: 2, child: _HeaderLabel('JOINED')),
@@ -229,6 +234,7 @@ class _DriverManagementScreenState extends State<DriverManagementScreen> {
           ),
           Expanded(flex: 2, child: Text(driver.nic, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13))),
           Expanded(flex: 2, child: Text(driver.mobile, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13))),
+          Expanded(flex: 2, child: Text(driver.email, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13), overflow: TextOverflow.ellipsis)),
           Expanded(flex: 1, child: Text(driver.age.toString(), style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13))),
           Expanded(flex: 2, child: Text(DateFormat('MMM dd, yyyy').format(driver.lastLicenseRenewed), style: const TextStyle(color: AppTheme.textTertiary, fontSize: 13))),
           Expanded(flex: 2, child: Text(DateFormat('MMM dd, yyyy').format(driver.workStartedDate), style: const TextStyle(color: AppTheme.textTertiary, fontSize: 13))),

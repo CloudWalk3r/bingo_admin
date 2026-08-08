@@ -14,6 +14,12 @@ class RequestModel extends RequestEntity {
     super.weightInKg = 0.0,
     super.status = RequestStatus.pending,
     super.statusChangedDateTime,
+    super.assignedDriverId,
+    super.assignedDriverName,
+    super.assignedDriverMobile,
+    super.assignedAt,
+    super.pickupLat,
+    super.pickupLng,
   });
 
   factory RequestModel.fromFirestore(DocumentSnapshot doc) {
@@ -24,6 +30,7 @@ class RequestModel extends RequestEntity {
     if (data['garbageType'] == 'glass') gType = GarbageType.glass;
 
     RequestStatus rStatus = RequestStatus.pending;
+    if (data['status'] == 'assigned') rStatus = RequestStatus.assigned;
     if (data['status'] == 'collected') rStatus = RequestStatus.collected;
     if (data['status'] == 'rejected') rStatus = RequestStatus.rejected;
 
@@ -42,6 +49,14 @@ class RequestModel extends RequestEntity {
       statusChangedDateTime: data['statusChangedDateTime'] != null
           ? (data['statusChangedDateTime'] as Timestamp).toDate()
           : null,
+      assignedDriverId: data['assignedDriverId'],
+      assignedDriverName: data['assignedDriverName'],
+      assignedDriverMobile: data['assignedDriverMobile'],
+      assignedAt: data['assignedAt'] != null
+          ? (data['assignedAt'] as Timestamp).toDate()
+          : null,
+      pickupLat: (data['pickupLat'] as num?)?.toDouble(),
+      pickupLng: (data['pickupLng'] as num?)?.toDouble(),
     );
   }
 
@@ -58,6 +73,12 @@ class RequestModel extends RequestEntity {
       'statusChangedDateTime': statusChangedDateTime != null
           ? Timestamp.fromDate(statusChangedDateTime!)
           : null,
+      'assignedDriverId': assignedDriverId,
+      'assignedDriverName': assignedDriverName,
+      'assignedDriverMobile': assignedDriverMobile,
+      'assignedAt': assignedAt != null ? Timestamp.fromDate(assignedAt!) : null,
+      'pickupLat': pickupLat,
+      'pickupLng': pickupLng,
     };
   }
 }

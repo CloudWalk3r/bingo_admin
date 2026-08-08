@@ -71,7 +71,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('User Database', style: Theme.of(context).textTheme.displayLarge),
+            Text('Registered House Owners', style: Theme.of(context).textTheme.displayLarge),
             OutlinedButton.icon(
               onPressed: _showSettingsDialog,
               icon: const Icon(Icons.settings_outlined, size: 16),
@@ -85,6 +85,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           child: StreamBuilder<List<UserEntity>>(
             stream: repo.watchAll(),
             builder: (context, snapshot) {
+              if (snapshot.hasError) return Center(child: Text('Could not load users: ${snapshot.error}', style: const TextStyle(color: AppTheme.error)));
               if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator(color: AppTheme.primaryColor));
               final users = snapshot.data ?? [];
               if (users.isEmpty) return const Center(child: Text('No users found.', style: TextStyle(color: AppTheme.textTertiary)));

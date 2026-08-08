@@ -47,10 +47,12 @@ class SideMenu extends StatelessWidget {
           ),
           const SizedBox(height: 48),
           _buildMenuItem(context, 0, Icons.dashboard_outlined, 'Dashboard', appState),
-          _buildMenuItem(context, 1, Icons.people_outline_rounded, 'User Management', appState),
-          _buildMenuItem(context, 2, Icons.local_shipping_outlined, 'Driver Management', appState),
-          _buildMenuItem(context, 3, Icons.assignment_outlined, 'User Requests', appState),
-          
+          _buildMenuItem(context, 1, Icons.people_outline_rounded, 'Registered Home Users', appState),
+          _buildMenuItem(context, 2, Icons.person_add_alt_1_outlined, 'Registration Requests', appState),
+          _buildMenuItem(context, 3, Icons.local_shipping_outlined, 'Driver Management', appState),
+          _buildMenuItem(context, 4, Icons.assignment_outlined, 'User Requests', appState),
+          _buildMenuItem(context, 5, Icons.map_outlined, 'Live Tracking', appState),
+
           const Spacer(),
           const Padding(
             padding: EdgeInsets.all(24.0),

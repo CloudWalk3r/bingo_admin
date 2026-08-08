@@ -1,2 +1,2 @@
 enum GarbageType { biodegradable, nonBiodegradable, glass }
-enum RequestStatus { pending, collected, rejected }
+enum RequestStatus { pending, assigned, collected, rejected }
