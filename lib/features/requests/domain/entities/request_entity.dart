@@ -11,6 +11,12 @@ class RequestEntity {
   final double weightInKg;
   RequestStatus status;
   DateTime? statusChangedDateTime;
+  String? assignedDriverId;
+  String? assignedDriverName;
+  String? assignedDriverMobile;
+  DateTime? assignedAt;
+  final double? pickupLat;
+  final double? pickupLng;
 
   RequestEntity({
     required this.id,
@@ -23,5 +29,11 @@ class RequestEntity {
     this.weightInKg = 0.0,
     this.status = RequestStatus.pending,
     this.statusChangedDateTime,
+    this.assignedDriverId,
+    this.assignedDriverName,
+    this.assignedDriverMobile,
+    this.assignedAt,
+    this.pickupLat,
+    this.pickupLng,
   });
 }

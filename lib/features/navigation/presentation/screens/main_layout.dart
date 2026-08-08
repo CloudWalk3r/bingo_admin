@@ -5,9 +5,10 @@ import 'package:biongo_admin/features/navigation/presentation/providers/app_stat
 import 'package:biongo_admin/features/navigation/presentation/widgets/side_menu.dart';
 import 'package:biongo_admin/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:biongo_admin/features/users/presentation/screens/user_management_screen.dart';
+import 'package:biongo_admin/features/users/presentation/screens/registration_requests_screen.dart';
 import 'package:biongo_admin/features/drivers/presentation/screens/driver_management_screen.dart';
 import 'package:biongo_admin/features/requests/presentation/screens/user_requests_screen.dart';
-import 'package:biongo_admin/features/live_tracking/presentation/screens/live_tracking_screen.dart';
+import 'package:biongo_admin/features/tracking/presentation/screens/driver_tracking_map_screen.dart';
 
 class MainLayout extends StatelessWidget {
   const MainLayout({super.key});
@@ -49,9 +50,10 @@ class MainLayout extends StatelessWidget {
                       switch (provider.currentView) {
                         case AppView.dashboard: return const DashboardScreen();
                         case AppView.userManagement: return const UserManagementScreen();
+                        case AppView.registrationRequests: return const RegistrationRequestsScreen();
                         case AppView.driverManagement: return const DriverManagementScreen();
                         case AppView.userRequests: return const UserRequestsScreen();
-                        case AppView.liveTracking: return const LiveTrackingScreen();
+                        case AppView.liveTracking: return const DriverTrackingMapScreen();
                       }
                     },
                   ),

@@ -23,6 +23,7 @@ class DriverRepositoryImpl implements DriverRepository {
       nic: driver.nic,
       name: driver.name,
       mobile: driver.mobile,
+      email: driver.email,
       age: driver.age,
       lastLicenseRenewed: driver.lastLicenseRenewed,
       workStartedDate: driver.workStartedDate,

@@ -7,6 +7,7 @@ class DriverModel extends DriverEntity {
     required super.nic,
     required super.name,
     required super.mobile,
+    required super.email,
     required super.age,
     required super.lastLicenseRenewed,
     required super.workStartedDate,
@@ -19,6 +20,7 @@ class DriverModel extends DriverEntity {
       nic: data['nic'] ?? '',
       name: data['name'] ?? '',
       mobile: data['mobile'] ?? '',
+      email: data['email'] ?? '',
       age: (data['age'] as num?)?.toInt() ?? 0,
       lastLicenseRenewed: data['lastLicenseRenewed'] != null
           ? (data['lastLicenseRenewed'] as Timestamp).toDate()
@@ -34,6 +36,7 @@ class DriverModel extends DriverEntity {
       'nic': nic,
       'name': name,
       'mobile': mobile,
+      'email': email.trim().toLowerCase(),
       'age': age,
       'lastLicenseRenewed': Timestamp.fromDate(lastLicenseRenewed),
       'workStartedDate': Timestamp.fromDate(workStartedDate),
