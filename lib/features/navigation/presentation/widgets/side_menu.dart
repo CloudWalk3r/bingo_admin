@@ -50,6 +50,7 @@ class SideMenu extends StatelessWidget {
           _buildMenuItem(context, 1, Icons.people_outline_rounded, 'User Management', appState),
           _buildMenuItem(context, 2, Icons.local_shipping_outlined, 'Driver Management', appState),
           _buildMenuItem(context, 3, Icons.assignment_outlined, 'User Requests', appState),
+          _buildMenuItem(context, 4, Icons.my_location_outlined, 'Live Tracking', appState),
           
           const Spacer(),
           const Padding(

@@ -11,6 +11,8 @@ import 'features/drivers/domain/repositories/driver_repository.dart';
 import 'features/drivers/data/repositories/driver_repository_impl.dart';
 import 'features/requests/domain/repositories/request_repository.dart';
 import 'features/requests/data/repositories/request_repository_impl.dart';
+import 'features/live_tracking/domain/repositories/driver_location_repository.dart';
+import 'features/live_tracking/data/repositories/driver_location_repository_impl.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,6 +33,9 @@ class BiongoAdminApp extends StatelessWidget {
         Provider<UserRepository>(create: (_) => UserRepositoryImpl()),
         Provider<DriverRepository>(create: (_) => DriverRepositoryImpl()),
         Provider<RequestRepository>(create: (_) => RequestRepositoryImpl()),
+        Provider<DriverLocationRepository>(
+          create: (_) => DriverLocationRepositoryImpl(),
+        ),
         
         // State Providers
         ChangeNotifierProvider(create: (_) => AppStateProvider()),

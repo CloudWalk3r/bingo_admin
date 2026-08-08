@@ -7,6 +7,7 @@ import 'package:biongo_admin/features/dashboard/presentation/screens/dashboard_s
 import 'package:biongo_admin/features/users/presentation/screens/user_management_screen.dart';
 import 'package:biongo_admin/features/drivers/presentation/screens/driver_management_screen.dart';
 import 'package:biongo_admin/features/requests/presentation/screens/user_requests_screen.dart';
+import 'package:biongo_admin/features/live_tracking/presentation/screens/live_tracking_screen.dart';
 
 class MainLayout extends StatelessWidget {
   const MainLayout({super.key});
@@ -50,6 +51,7 @@ class MainLayout extends StatelessWidget {
                         case AppView.userManagement: return const UserManagementScreen();
                         case AppView.driverManagement: return const DriverManagementScreen();
                         case AppView.userRequests: return const UserRequestsScreen();
+                        case AppView.liveTracking: return const LiveTrackingScreen();
                       }
                     },
                   ),
