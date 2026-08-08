@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
 
-enum AppView { dashboard, userManagement, registrationRequests, driverManagement, userRequests, driverTracking }
+enum AppView {
+  dashboard,
+  userManagement,
+  registrationRequests,
+  driverManagement,
+  userRequests,
+  liveTracking,
+}
 
 class AppStateProvider with ChangeNotifier {
   int _selectedIndex = 0;
@@ -19,7 +26,7 @@ class AppStateProvider with ChangeNotifier {
       case 2: return AppView.registrationRequests;
       case 3: return AppView.driverManagement;
       case 4: return AppView.userRequests;
-      case 5: return AppView.driverTracking;
+      case 5: return AppView.liveTracking;
       default: return AppView.dashboard;
     }
   }

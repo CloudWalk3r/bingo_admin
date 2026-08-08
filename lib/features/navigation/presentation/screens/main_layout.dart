@@ -53,7 +53,7 @@ class MainLayout extends StatelessWidget {
                         case AppView.registrationRequests: return const RegistrationRequestsScreen();
                         case AppView.driverManagement: return const DriverManagementScreen();
                         case AppView.userRequests: return const UserRequestsScreen();
-                        case AppView.driverTracking: return const DriverTrackingMapScreen();
+                        case AppView.liveTracking: return const DriverTrackingMapScreen();
                       }
                     },
                   ),
