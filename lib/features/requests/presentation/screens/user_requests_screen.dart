@@ -176,7 +176,20 @@ class _UserRequestsScreenState extends State<UserRequestsScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text('Collection Requests', style: Theme.of(context).textTheme.displayLarge),
-            _buildDatePicker(context),
+            Row(
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () {},
+                  icon: const Icon(Icons.add_rounded, size: 18),
+                  label: const Text('Add Request'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                _buildDatePicker(context),
+              ],
+            ),
           ],
         ),
         const SizedBox(height: 32),
