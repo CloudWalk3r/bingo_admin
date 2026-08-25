@@ -7,6 +7,7 @@ import '../../domain/entities/request_entity.dart';
 import '../../domain/repositories/request_repository.dart';
 import '../../../drivers/domain/entities/driver_entity.dart';
 import '../../../drivers/domain/repositories/driver_repository.dart';
+import '../widgets/add_request_dialog.dart';
 
 class UserRequestsScreen extends StatefulWidget {
   const UserRequestsScreen({super.key});
@@ -17,6 +18,17 @@ class UserRequestsScreen extends StatefulWidget {
 
 class _UserRequestsScreenState extends State<UserRequestsScreen> {
   DateTime _selectedDate = DateTime.now();
+
+  Future<void> _showAddRequestDialog() async {
+    final requestDate = await showDialog<DateTime>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AddRequestDialog(initialDate: _selectedDate),
+    );
+    if (requestDate != null && mounted) {
+      setState(() => _selectedDate = requestDate);
+    }
+  }
 
   void _showAssignDriverDialog(RequestEntity request) {
     final driverRepo = Provider.of<DriverRepository>(context, listen: false);
@@ -179,7 +191,7 @@ class _UserRequestsScreenState extends State<UserRequestsScreen> {
             Row(
               children: [
                 ElevatedButton.icon(
-                  onPressed: () {},
+                  onPressed: _showAddRequestDialog,
                   icon: const Icon(Icons.add_rounded, size: 18),
                   label: const Text('Add Request'),
                   style: ElevatedButton.styleFrom(
