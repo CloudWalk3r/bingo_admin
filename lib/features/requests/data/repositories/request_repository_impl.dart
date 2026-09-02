@@ -9,13 +9,17 @@ class RequestRepositoryImpl implements RequestRepository {
   final FirebaseFirestore _db;
 
   RequestRepositoryImpl({FirebaseFirestore? db})
-      : _db = db ?? FirebaseFirestore.instance;
+    : _db = db ?? FirebaseFirestore.instance;
 
   @override
   Stream<List<RequestEntity>> watchAll() {
-    return _db.collection('requests').snapshots().map(
-      (snap) => snap.docs.map((doc) => RequestModel.fromFirestore(doc)).toList(),
-    );
+    return _db
+        .collection('requests')
+        .snapshots()
+        .map(
+          (snap) =>
+              snap.docs.map((doc) => RequestModel.fromFirestore(doc)).toList(),
+        );
   }
 
   @override
@@ -28,7 +32,31 @@ class RequestRepositoryImpl implements RequestRepository {
         .where('requestedDateTime', isGreaterThanOrEqualTo: startOfDay)
         .where('requestedDateTime', isLessThan: endOfDay)
         .snapshots()
-        .map((snap) => snap.docs.map((doc) => RequestModel.fromFirestore(doc)).toList());
+        .map(
+          (snap) =>
+              snap.docs.map((doc) => RequestModel.fromFirestore(doc)).toList(),
+        );
+  }
+
+  @override
+  Future<void> addRequest(RequestEntity request) {
+    final doc = _db.collection('requests').doc();
+    final model = RequestModel(
+      id: doc.id,
+      userName: request.userName,
+      userMobile: request.userMobile,
+      userAddress: request.userAddress,
+      userEmail: request.userEmail,
+      requestedDateTime: request.requestedDateTime,
+      garbageType: request.garbageType,
+      weightInKg: request.weightInKg,
+      status: request.status,
+      assignedDriverId: request.assignedDriverId,
+      assignedDriverName: request.assignedDriverName,
+      assignedDriverMobile: request.assignedDriverMobile,
+      assignedAt: request.assignedAt,
+    );
+    return doc.set(model.toFirestore());
   }
 
   @override
