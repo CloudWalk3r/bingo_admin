@@ -4,7 +4,8 @@ import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
 import 'features/navigation/presentation/providers/app_state_provider.dart';
-import 'features/navigation/presentation/screens/main_layout.dart';
+import 'features/auth/presentation/providers/auth_provider.dart';
+import 'features/auth/presentation/screens/auth_gate.dart';
 import 'features/users/domain/repositories/user_repository.dart';
 import 'features/users/data/repositories/user_repository_impl.dart';
 import 'features/users/domain/repositories/registration_request_repository.dart';
@@ -42,13 +43,14 @@ class BiongoAdminApp extends StatelessWidget {
           create: (_) => DriverLocationRepositoryImpl(),
         ),
         // State Providers
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => AppStateProvider()),
       ],
       child: MaterialApp(
         title: 'Biongo Admin',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.darkTheme,
-        home: const MainLayout(),
+        home: const AuthGate(),
       ),
     );
   }

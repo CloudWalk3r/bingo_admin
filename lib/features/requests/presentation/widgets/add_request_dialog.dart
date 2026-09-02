@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../../../core/constants/enums.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_dialog.dart';
 import '../../../drivers/domain/entities/driver_entity.dart';
 import '../../../drivers/domain/repositories/driver_repository.dart';
 import '../../domain/entities/request_entity.dart';
@@ -145,192 +146,164 @@ class _AddRequestDialogState extends State<AddRequestDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: const Color(0xFF0F1B25),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: const BorderSide(color: AppTheme.borderColor),
-      ),
-      title: const Row(
-        children: [
-          Icon(Icons.add_task_rounded, color: AppTheme.primaryColor),
-          SizedBox(width: 12),
-          Text(
-            'Add Collection Request',
-            style: TextStyle(color: Colors.white, fontSize: 20),
-          ),
-        ],
-      ),
-      content: SizedBox(
-        width: 620,
-        child: SingleChildScrollView(
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: _field(
-                        label: 'House owner name',
-                        controller: _nameController,
-                        icon: Icons.person_outline_rounded,
-                      ),
+    return AppDialog(
+      title: 'Add Collection Request',
+      subtitle:
+          'Log a pickup on behalf of a house owner, and optionally '
+          'assign the driver right away.',
+      icon: Icons.add_task_rounded,
+      width: 620,
+      actions: [
+        AppDialogCancelButton(
+          onPressed: _isSaving ? null : () => Navigator.pop(context),
+        ),
+        AppDialogActionButton(
+          label: _isSaving ? 'Creating…' : 'Create Request',
+          icon: Icons.add_rounded,
+          isLoading: _isSaving,
+          onPressed: _submit,
+        ),
+      ],
+      child: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: _field(
+                      label: 'House owner name',
+                      controller: _nameController,
+                      icon: Icons.person_outline_rounded,
                     ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: _field(
-                        label: 'Mobile number',
-                        controller: _mobileController,
-                        icon: Icons.call_outlined,
-                        keyboardType: TextInputType.phone,
-                      ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: _field(
+                      label: 'Mobile number',
+                      controller: _mobileController,
+                      icon: Icons.call_outlined,
+                      keyboardType: TextInputType.phone,
                     ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                _field(
-                  label: 'Pickup address',
-                  controller: _addressController,
-                  icon: Icons.location_on_outlined,
-                ),
-                const SizedBox(height: 14),
-                _field(
-                  label: 'Email (optional)',
-                  controller: _emailController,
-                  icon: Icons.mail_outline_rounded,
-                  keyboardType: TextInputType.emailAddress,
-                  required: false,
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Expanded(
-                      child: DropdownButtonFormField<GarbageType>(
-                        initialValue: _garbageType,
-                        dropdownColor: const Color(0xFF0F1B25),
-                        decoration: const InputDecoration(
-                          labelText: 'Garbage type',
-                          prefixIcon: Icon(Icons.recycling_rounded, size: 18),
-                        ),
-                        items: GarbageType.values
-                            .map(
-                              (type) => DropdownMenuItem(
-                                value: type,
-                                child: Text(_garbageLabel(type)),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: _isSaving
-                            ? null
-                            : (value) => setState(
-                                () => _garbageType = value ?? _garbageType,
-                              ),
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: _field(
-                        label: 'Estimated weight (kg)',
-                        controller: _weightController,
-                        icon: Icons.scale_outlined,
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        required: false,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _isSaving ? null : _selectDate,
-                        icon: const Icon(
-                          Icons.calendar_today_outlined,
-                          size: 16,
-                        ),
-                        label: Text(
-                          DateFormat('MMM dd, yyyy').format(_pickupDateTime),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 18),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _isSaving ? null : _selectTime,
-                        icon: const Icon(Icons.schedule_outlined, size: 16),
-                        label: Text(
-                          DateFormat('hh:mm a').format(_pickupDateTime),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 18),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                StreamBuilder<List<DriverEntity>>(
-                  stream: context.read<DriverRepository>().watchAll(),
-                  builder: (context, snapshot) {
-                    final drivers = snapshot.data ?? [];
-                    return DropdownButtonFormField<DriverEntity>(
-                      initialValue: _selectedDriver,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              _field(
+                label: 'Pickup address',
+                controller: _addressController,
+                icon: Icons.location_on_outlined,
+              ),
+              const SizedBox(height: 14),
+              _field(
+                label: 'Email (optional)',
+                controller: _emailController,
+                icon: Icons.mail_outline_rounded,
+                keyboardType: TextInputType.emailAddress,
+                required: false,
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(
+                    child: DropdownButtonFormField<GarbageType>(
+                      initialValue: _garbageType,
                       dropdownColor: const Color(0xFF0F1B25),
                       decoration: const InputDecoration(
-                        labelText: 'Assign driver (optional)',
-                        prefixIcon: Icon(
-                          Icons.local_shipping_outlined,
-                          size: 18,
-                        ),
+                        labelText: 'Garbage type',
+                        prefixIcon: Icon(Icons.recycling_rounded, size: 18),
                       ),
-                      items: drivers
+                      items: GarbageType.values
                           .map(
-                            (driver) => DropdownMenuItem(
-                              value: driver,
-                              child: Text('${driver.name} • ${driver.mobile}'),
+                            (type) => DropdownMenuItem(
+                              value: type,
+                              child: Text(_garbageLabel(type)),
                             ),
                           )
                           .toList(),
                       onChanged: _isSaving
                           ? null
-                          : (driver) =>
-                                setState(() => _selectedDriver = driver),
-                    );
-                  },
-                ),
-              ],
-            ),
+                          : (value) => setState(
+                              () => _garbageType = value ?? _garbageType,
+                            ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: _field(
+                      label: 'Estimated weight (kg)',
+                      controller: _weightController,
+                      icon: Icons.scale_outlined,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      required: false,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _isSaving ? null : _selectDate,
+                      icon: const Icon(Icons.calendar_today_outlined, size: 16),
+                      label: Text(
+                        DateFormat('MMM dd, yyyy').format(_pickupDateTime),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _isSaving ? null : _selectTime,
+                      icon: const Icon(Icons.schedule_outlined, size: 16),
+                      label: Text(
+                        DateFormat('hh:mm a').format(_pickupDateTime),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              StreamBuilder<List<DriverEntity>>(
+                stream: context.read<DriverRepository>().watchAll(),
+                builder: (context, snapshot) {
+                  final drivers = snapshot.data ?? [];
+                  return DropdownButtonFormField<DriverEntity>(
+                    initialValue: _selectedDriver,
+                    dropdownColor: const Color(0xFF0F1B25),
+                    decoration: const InputDecoration(
+                      labelText: 'Assign driver (optional)',
+                      prefixIcon: Icon(Icons.local_shipping_outlined, size: 18),
+                    ),
+                    items: drivers
+                        .map(
+                          (driver) => DropdownMenuItem(
+                            value: driver,
+                            child: Text('${driver.name} • ${driver.mobile}'),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: _isSaving
+                        ? null
+                        : (driver) => setState(() => _selectedDriver = driver),
+                  );
+                },
+              ),
+            ],
           ),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: _isSaving ? null : () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        ElevatedButton.icon(
-          onPressed: _isSaving ? null : _submit,
-          icon: _isSaving
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : const Icon(Icons.add_rounded, size: 18),
-          label: Text(_isSaving ? 'Creating...' : 'Create Request'),
-        ),
-      ],
     );
   }
 

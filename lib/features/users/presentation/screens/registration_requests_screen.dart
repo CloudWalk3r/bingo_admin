@@ -2,8 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/admin_search_field.dart';
+import '../../../../core/widgets/app_dialog.dart';
+import '../../../../core/widgets/page_header.dart';
+import '../../../../core/widgets/state_views.dart';
+import '../../../../core/widgets/status_pill.dart';
 import '../../domain/entities/registration_request_entity.dart';
 import '../../domain/repositories/registration_request_repository.dart';
+
+enum _TypeFilter { all, drivers, houseOwners }
 
 class RegistrationRequestsScreen extends StatefulWidget {
   const RegistrationRequestsScreen({super.key});
@@ -13,65 +20,81 @@ class RegistrationRequestsScreen extends StatefulWidget {
 }
 
 class _RegistrationRequestsScreenState extends State<RegistrationRequestsScreen> {
-  Future<bool> _confirm({required String title, required String message, required Color accent, required String confirmLabel}) async {
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: const Color(0xFF0F1B25),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: const BorderSide(color: AppTheme.borderColor)),
-        title: Text(title, style: const TextStyle(color: Colors.white)),
-        content: Text(message, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel', style: TextStyle(color: AppTheme.textTertiary))),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: accent),
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text(confirmLabel),
-          ),
-        ],
-      ),
-    );
-    return result ?? false;
-  }
+  String _query = '';
+  _TypeFilter _filter = _TypeFilter.all;
 
-  void _approveRequest(RegistrationRequestEntity request) async {
-    final confirmed = await _confirm(
-      title: 'Approve Registration',
-      message: 'Approve ${request.name}\'s ${request.type == RegistrationType.driver ? 'driver' : 'house owner'} registration? ${request.type == RegistrationType.driver ? 'They will be added to the Driver Fleet and become assignable.' : 'They will appear in Registered Home Users.'}',
-      accent: AppTheme.success,
-      confirmLabel: 'Approve',
+  /// Requests with an approve/reject write in flight.
+  final Set<String> _processing = {};
+
+  Future<void> _review(RegistrationRequestEntity request, {required bool approve}) async {
+    if (_processing.contains(request.id)) return;
+
+    final isDriver = request.type == RegistrationType.driver;
+    final name = request.name.isEmpty ? 'this applicant' : request.name;
+
+    final confirmed = await showAppConfirmDialog(
+      context,
+      title: approve ? 'Approve registration' : 'Reject registration',
+      icon: approve ? Icons.verified_outlined : Icons.person_off_outlined,
+      accent: approve ? AppTheme.success : AppTheme.error,
+      confirmLabel: approve ? 'Approve' : 'Reject',
+      confirmIcon: approve ? Icons.check_rounded : Icons.close_rounded,
+      message: approve
+          ? (isDriver
+                ? 'Approve $name as a driver? They join the Driver Fleet and become assignable to collection routes.'
+                : 'Approve $name as a house owner? They appear under Registered House Owners.')
+          : 'Reject $name\'s registration? They will not be added, and the request leaves this list.',
     );
     if (!confirmed || !mounted) return;
 
     final repo = Provider.of<RegistrationRequestRepository>(context, listen: false);
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _processing.add(request.id));
+
     try {
-      await repo.approve(request);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${request.name} approved'), backgroundColor: AppTheme.success, behavior: SnackBarBehavior.floating));
+      if (approve) {
+        await repo.approve(request);
+      } else {
+        await repo.reject(request);
       }
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.error));
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('$name ${approve ? 'approved' : 'rejected'}'),
+          backgroundColor: approve ? AppTheme.success : AppTheme.textTertiary,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (error) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Could not save: $error'),
+          backgroundColor: AppTheme.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _processing.remove(request.id));
     }
   }
 
-  void _rejectRequest(RegistrationRequestEntity request) async {
-    final confirmed = await _confirm(
-      title: 'Reject Registration',
-      message: 'Reject ${request.name}\'s registration? They will not be added, and this request will be removed from the pending list.',
-      accent: AppTheme.error,
-      confirmLabel: 'Reject',
-    );
-    if (!confirmed || !mounted) return;
+  List<RegistrationRequestEntity> _visibleRequests(List<RegistrationRequestEntity> requests) {
+    final query = _query.trim().toLowerCase();
 
-    final repo = Provider.of<RegistrationRequestRepository>(context, listen: false);
-    try {
-      await repo.reject(request);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${request.name} rejected'), backgroundColor: AppTheme.textTertiary, behavior: SnackBarBehavior.floating));
+    return requests.where((request) {
+      switch (_filter) {
+        case _TypeFilter.drivers:
+          if (request.type != RegistrationType.driver) return false;
+        case _TypeFilter.houseOwners:
+          if (request.type != RegistrationType.houseOwner) return false;
+        case _TypeFilter.all:
+          break;
       }
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.error));
-    }
+      if (query.isEmpty) return true;
+      return request.name.toLowerCase().contains(query) ||
+          request.mobile.toLowerCase().contains(query) ||
+          request.nic.toLowerCase().contains(query) ||
+          request.email.toLowerCase().contains(query);
+    }).toList()..sort((a, b) => b.submittedAt.compareTo(a.submittedAt));
   }
 
   @override
@@ -81,11 +104,10 @@ class _RegistrationRequestsScreenState extends State<RegistrationRequestsScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Registration Requests', style: Theme.of(context).textTheme.displayLarge),
-        const SizedBox(height: 6),
-        const Text(
-          'Drivers and house owners who registered through the app, awaiting your approval.',
-          style: TextStyle(color: AppTheme.textTertiary, fontSize: 13),
+        const PageHeader(
+          title: 'Registration Requests',
+          subtitle:
+              'Drivers and house owners who signed up through the app, awaiting your approval.',
         ),
         const SizedBox(height: 24),
         Expanded(
@@ -93,20 +115,93 @@ class _RegistrationRequestsScreenState extends State<RegistrationRequestsScreen>
             stream: repo.watchPending(),
             builder: (context, snapshot) {
               if (snapshot.hasError) {
-                return Center(child: Text('Could not load registration requests: ${snapshot.error}', style: const TextStyle(color: AppTheme.error)));
+                return ErrorStateView(
+                  title: 'Could not load registration requests',
+                  error: snapshot.error!,
+                );
               }
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator(color: AppTheme.primaryColor));
-              }
-              final requests = snapshot.data ?? [];
-              if (requests.isEmpty) {
-                return const Center(child: Text('No pending registrations. All caught up!', style: TextStyle(color: AppTheme.textTertiary)));
+                return const _RequestCardSkeleton();
               }
 
-              return ListView.separated(
-                itemCount: requests.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 10),
-                itemBuilder: (context, index) => _buildPendingRow(requests[index]),
+              final requests = snapshot.data ?? const <RegistrationRequestEntity>[];
+              if (requests.isEmpty) {
+                return const EmptyState(
+                  icon: Icons.task_alt_rounded,
+                  title: 'All caught up',
+                  message: 'No registrations are waiting for review right now.',
+                );
+              }
+
+              final driverCount = requests.where((r) => r.type == RegistrationType.driver).length;
+              final visible = _visibleRequests(requests);
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TableToolbar(
+                    leading: [
+                      AdminSearchField(
+                        hintText: 'Search name, NIC, mobile or email…',
+                        width: 320,
+                        onChanged: (value) => setState(() => _query = value),
+                      ),
+                      FilterSegments<_TypeFilter>(
+                        selected: _filter,
+                        onSelected: (value) => setState(() => _filter = value),
+                        options: [
+                          FilterOption(
+                            value: _TypeFilter.all,
+                            label: 'All',
+                            count: requests.length,
+                          ),
+                          FilterOption(
+                            value: _TypeFilter.drivers,
+                            label: 'Drivers',
+                            count: driverCount,
+                          ),
+                          FilterOption(
+                            value: _TypeFilter.houseOwners,
+                            label: 'House Owners',
+                            count: requests.length - driverCount,
+                            color: AppTheme.accentColor,
+                          ),
+                        ],
+                      ),
+                    ],
+                    trailing: [
+                      StatChip(
+                        label: 'Pending',
+                        value: '${requests.length}',
+                        icon: Icons.pending_actions_rounded,
+                        color: AppTheme.warning,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Expanded(
+                    child: visible.isEmpty
+                        ? const EmptyState(
+                            icon: Icons.search_off_rounded,
+                            title: 'No requests match your filters',
+                            message: 'Try a different type or clear the search.',
+                          )
+                        : ListView.separated(
+                            itemCount: visible.length,
+                            separatorBuilder: (_, _) => const SizedBox(height: 12),
+                            itemBuilder: (context, index) {
+                              final request = visible[index];
+                              return _RequestCard(
+                                key: ValueKey(request.id),
+                                request: request,
+                                isProcessing: _processing.contains(request.id),
+                                onApprove: () => _review(request, approve: true),
+                                onReject: () => _review(request, approve: false),
+                              );
+                            },
+                          ),
+                  ),
+                ],
               );
             },
           ),
@@ -114,108 +209,327 @@ class _RegistrationRequestsScreenState extends State<RegistrationRequestsScreen>
       ],
     );
   }
+}
 
-  Widget _buildPendingRow(RegistrationRequestEntity request) {
+class _RequestCard extends StatefulWidget {
+  const _RequestCard({
+    super.key,
+    required this.request,
+    required this.isProcessing,
+    required this.onApprove,
+    required this.onReject,
+  });
+
+  final RegistrationRequestEntity request;
+  final bool isProcessing;
+  final VoidCallback onApprove;
+  final VoidCallback onReject;
+
+  @override
+  State<_RequestCard> createState() => _RequestCardState();
+}
+
+class _RequestCardState extends State<_RequestCard> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final request = widget.request;
     final isDriver = request.type == RegistrationType.driver;
     final typeColor = isDriver ? AppTheme.primaryColor : AppTheme.accentColor;
 
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.borderColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(colors: [typeColor, Color.lerp(typeColor, Colors.black, 0.3)!]),
-                ),
-                child: Center(
-                  child: Text(
-                    request.name.isNotEmpty ? request.name[0].toUpperCase() : '?',
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: _hovered ? Colors.white.withOpacity(0.045) : AppTheme.surfaceColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: _hovered ? typeColor.withOpacity(0.35) : AppTheme.borderColor),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [typeColor, Color.lerp(typeColor, Colors.black, 0.35)!],
+                    ),
+                  ),
+                  child: Center(
+                    child: Text(
+                      request.name.isNotEmpty ? request.name[0].toUpperCase() : '?',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(request.name.isEmpty ? '(no name)' : request.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                        const SizedBox(width: 10),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(color: typeColor.withOpacity(0.14), borderRadius: BorderRadius.circular(20), border: Border.all(color: typeColor.withOpacity(0.4))),
-                          child: Text(isDriver ? 'DRIVER' : 'HOUSE OWNER', style: TextStyle(color: typeColor, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Text('Submitted ${DateFormat('MMM dd, yyyy • hh:mm a').format(request.submittedAt)}', style: const TextStyle(color: AppTheme.textTertiary, fontSize: 12)),
-                  ],
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 6,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Text(
+                            request.name.isEmpty ? '(no name)' : request.name,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          StatusPill(
+                            label: isDriver ? 'DRIVER' : 'HOUSE OWNER',
+                            color: typeColor,
+                            icon: isDriver ? Icons.local_shipping_rounded : Icons.home_rounded,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        'Submitted ${DateFormat('MMM dd, yyyy • hh:mm a').format(request.submittedAt)}',
+                        style: const TextStyle(color: AppTheme.textTertiary, fontSize: 12),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.check_circle_outline_rounded, color: AppTheme.success, size: 26),
-                tooltip: 'Approve',
-                onPressed: () => _approveRequest(request),
-              ),
-              IconButton(
-                icon: const Icon(Icons.cancel_outlined, color: AppTheme.error, size: 26),
-                tooltip: 'Reject',
-                onPressed: () => _rejectRequest(request),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          const Divider(color: AppTheme.borderColor, height: 1),
-          const SizedBox(height: 14),
-          Wrap(
-            spacing: 28,
-            runSpacing: 12,
-            children: [
-              _detailField('Mobile', request.mobile, Icons.call_outlined),
-              _detailField('NIC', request.nic, Icons.badge_outlined),
-              _detailField('Email', request.email, Icons.mail_outline_rounded),
-              if (!isDriver && (request.houseNumber ?? '').isNotEmpty) _detailField('House No', request.houseNumber!, Icons.numbers_rounded),
-              if (!isDriver && (request.address ?? '').isNotEmpty) _detailField('Address', request.address!, Icons.location_on_outlined),
-            ],
+                const SizedBox(width: 16),
+                if (widget.isProcessing)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20),
+                    child: SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppTheme.primaryColor,
+                      ),
+                    ),
+                  )
+                else
+                  Row(
+                    children: [
+                      _ReviewButton(
+                        label: 'Reject',
+                        icon: Icons.close_rounded,
+                        color: AppTheme.error,
+                        filled: false,
+                        onPressed: widget.onReject,
+                      ),
+                      const SizedBox(width: 10),
+                      _ReviewButton(
+                        label: 'Approve',
+                        icon: Icons.check_rounded,
+                        color: AppTheme.success,
+                        filled: true,
+                        onPressed: widget.onApprove,
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            const Divider(color: AppTheme.borderColor, height: 1),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 32,
+              runSpacing: 14,
+              children: [
+                _DetailField(label: 'Mobile', value: request.mobile, icon: Icons.call_outlined),
+                _DetailField(label: 'NIC', value: request.nic, icon: Icons.badge_outlined),
+                _DetailField(
+                  label: 'Email',
+                  value: request.email,
+                  icon: Icons.mail_outline_rounded,
+                ),
+                if (!isDriver && (request.houseNumber ?? '').isNotEmpty)
+                  _DetailField(
+                    label: 'House No',
+                    value: request.houseNumber!,
+                    icon: Icons.numbers_rounded,
+                  ),
+                if (!isDriver && (request.address ?? '').isNotEmpty)
+                  _DetailField(
+                    label: 'Address',
+                    value: request.address!,
+                    icon: Icons.location_on_outlined,
+                    width: 300,
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ReviewButton extends StatelessWidget {
+  const _ReviewButton({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.filled,
+    required this.onPressed,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color color;
+  final bool filled;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(11),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+        decoration: BoxDecoration(
+          color: color.withOpacity(filled ? 0.18 : 0.06),
+          borderRadius: BorderRadius.circular(11),
+          border: Border.all(color: color.withOpacity(filled ? 0.55 : 0.3)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 15, color: color),
+            const SizedBox(width: 7),
+            Text(
+              label,
+              style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DetailField extends StatelessWidget {
+  const _DetailField({
+    required this.label,
+    required this.value,
+    required this.icon,
+    this.width = 210,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: width,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 15, color: AppTheme.textTertiary),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label.toUpperCase(),
+                  style: const TextStyle(
+                    color: AppTheme.textTertiary,
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.7,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  value.isEmpty ? '—' : value,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _detailField(String label, String value, IconData icon) {
-    return SizedBox(
-      width: 220,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 15, color: AppTheme.textTertiary),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label.toUpperCase(), style: const TextStyle(color: AppTheme.textTertiary, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
-                const SizedBox(height: 2),
-                Text(value.isEmpty ? '—' : value, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis),
-              ],
-            ),
-          ),
-        ],
+class _RequestCardSkeleton extends StatelessWidget {
+  const _RequestCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Shimmer(
+      child: SingleChildScrollView(
+        physics: const NeverScrollableScrollPhysics(),
+        child: Column(
+          children: List.generate(3, (index) {
+            return Container(
+              height: 150,
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceColor,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppTheme.borderColor),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: const [
+                      SkeletonBox(width: 46, height: 46, radius: 23),
+                      SizedBox(width: 16),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SkeletonBox(width: 180, height: 15),
+                          SizedBox(height: 8),
+                          SkeletonBox(width: 220, height: 11),
+                        ],
+                      ),
+                      Spacer(),
+                      SkeletonBox(width: 90, height: 36, radius: 11),
+                      SizedBox(width: 10),
+                      SkeletonBox(width: 90, height: 36, radius: 11),
+                    ],
+                  ),
+                  const SizedBox(height: 28),
+                  Row(
+                    children: const [
+                      SkeletonBox(width: 150, height: 30),
+                      SizedBox(width: 32),
+                      SkeletonBox(width: 150, height: 30),
+                      SizedBox(width: 32),
+                      SkeletonBox(width: 150, height: 30),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          }),
+        ),
       ),
     );
   }
